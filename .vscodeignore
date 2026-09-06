@@ -1,0 +1,14 @@
+.vscode/**
+test/**
+src/**
+esbuild.mjs
+vitest.config.mts
+eslint.config.mjs
+tsconfig.json
+.gitignore
+.github/**
+.travis.yml
+**/*.map
+.bun-lockb
+bun.lock
+node_modules/**

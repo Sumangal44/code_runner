@@ -1,0 +1,6 @@
+.DS_Store
+npm-debug.log
+out
+dist
+node_modules
+*.vsix
