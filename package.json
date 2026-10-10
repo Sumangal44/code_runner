@@ -1,8 +1,8 @@
 {
   "name": "code-runner",
   "displayName": "Code Runner",
-  "description": "Run C, C++, Java, JS, PHP, Python, Perl, Ruby, Go, Lua, Groovy, PowerShell, CMD, BASH, F#, C#, VBScript, TypeScript, CoffeeScript, Scala, Swift, Julia, Crystal, OCaml, R, AppleScript, Elixir, VB.NET, Clojure, Haxe, Obj-C, Rust, Racket, Scheme, AutoHotkey, AutoIt, Kotlin, Dart, Pascal, Haskell, Nim, D, Lisp, Kit, V, SCSS, Sass, CUDA, Less, Fortran, Ring, Standard ML, Zig, Mojo, Erlang, SPWN, Pkl, Gleam",
-  "version": "0.13.0",
+  "description": "Run C, C++, Java, JS, PHP, Python, Perl, Ruby, Go, Lua, Groovy, PowerShell, CMD, BASH, F#, C#, VBScript, TypeScript, CoffeeScript, Scala, Swift, Julia, Crystal, OCaml, R, AppleScript, Elixir, VB.NET, Clojure, Haxe, Obj-C, Rust, Racket, Scheme, AutoHotkey, AutoIt, Kotlin, Dart, Pascal, Haskell, Nim, D, Lisp, Kit, V, SCSS, Sass, CUDA, Less, Fortran, Ring, Standard ML, Zig, Mojo, Erlang, SPWN, Pkl, Gleam, Bun, Deno",
+  "version": "0.14.0",
   "featureFlags": {
     "usingNewPythonInterpreterPathApi": true,
     "usingNewPythonInterpreterPathApiV2": true
@@ -22,6 +22,8 @@
     "python",
     "perl",
     "ruby",
+    "bun",
+    "deno",
     "multi-root ready"
   ],
   "bugs": {
@@ -38,8 +40,11 @@
   },
   "activationEvents": [
     "onCommand:code-runner.run",
+    "onCommand:code-runner.runWithArguments",
     "onCommand:code-runner.runCustomCommand",
     "onCommand:code-runner.runByLanguage",
+    "onCommand:code-runner.copyRunCommand",
+    "onCommand:code-runner.clearOutput",
     "onCommand:code-runner.stop"
   ],
   "main": "./dist/extension.js",
@@ -51,12 +56,27 @@
         "icon": "$(play)"
       },
       {
+        "command": "code-runner.runWithArguments",
+        "title": "Run Code with Arguments",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "code-runner.runCustomCommand",
         "title": "Run Custom Command"
       },
       {
         "command": "code-runner.runByLanguage",
         "title": "Run By Language"
+      },
+      {
+        "command": "code-runner.copyRunCommand",
+        "title": "Copy Run Command",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "code-runner.clearOutput",
+        "title": "Clear Output Channel",
+        "icon": "$(clear-all)"
       },
       {
         "command": "code-runner.stop",
@@ -68,6 +88,10 @@
       {
         "command": "code-runner.run",
         "key": "ctrl+alt+n"
+      },
+      {
+        "command": "code-runner.runWithArguments",
+        "key": "ctrl+alt+a"
       },
       {
         "command": "code-runner.runCustomCommand",
@@ -87,7 +111,17 @@
         {
           "when": "!inOutput && config.code-runner.showRunCommandInEditorContextMenu",
           "command": "code-runner.run",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "when": "!inOutput && config.code-runner.showRunCommandInEditorContextMenu",
+          "command": "code-runner.runWithArguments",
+          "group": "navigation@2"
+        },
+        {
+          "when": "!inOutput && config.code-runner.showRunCommandInEditorContextMenu",
+          "command": "code-runner.copyRunCommand",
+          "group": "navigation@3"
         },
         {
           "when": "inOutput && !config.code-runner.runInTerminal",
@@ -99,7 +133,12 @@
         {
           "when": "config.code-runner.showRunIconInEditorTitleMenu",
           "command": "code-runner.run",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "when": "config.code-runner.showRunIconInEditorTitleMenu",
+          "command": "code-runner.runWithArguments",
+          "group": "navigation@2"
         }
       ],
       "editor/title": [
@@ -113,7 +152,17 @@
         {
           "when": "!explorerResourceIsFolder && config.code-runner.showRunCommandInExplorerContextMenu",
           "command": "code-runner.run",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "when": "!explorerResourceIsFolder && config.code-runner.showRunCommandInExplorerContextMenu",
+          "command": "code-runner.runWithArguments",
+          "group": "navigation@2"
+        },
+        {
+          "when": "!explorerResourceIsFolder && config.code-runner.showRunCommandInExplorerContextMenu",
+          "command": "code-runner.copyRunCommand",
+          "group": "navigation@3"
         }
       ]
     },
@@ -188,7 +237,11 @@
             "erlang": "escript",
             "spwn": "spwn build",
             "pkl": "cd $dir && pkl eval -f yaml $fileName -o $fileNameWithoutExt.yaml",
-            "gleam": "gleam run -m $fileNameWithoutExt"
+            "gleam": "gleam run -m $fileNameWithoutExt",
+            "bun": "bun run",
+            "deno": "deno run",
+            "kotlin": "cd $dir && kotlinc $fileName -include-runtime -d $fileNameWithoutExt.jar && java -jar $fileNameWithoutExt.jar",
+            "elixir": "elixir"
           },
           "description": "Set the executor of each language.",
           "scope": "resource"
@@ -204,6 +257,9 @@
             ".ml": "ocaml",
             ".zig": "zig run",
             ".exs": "elixir",
+            ".ex": "elixir",
+            ".bun": "bun run",
+            ".rs": "cd $dir && rustc $fileName && $dir$fileNameWithoutExt",
             ".hx": "haxe --cwd $dirWithoutTrailingSlash --run $fileNameWithoutExt",
             ".rkt": "racket",
             ".scm": "csi -script",
@@ -363,6 +419,24 @@
           "default": true,
           "description": "Whether to respect Shebang to run code.",
           "scope": "resource"
+        },
+        "code-runner.timeout": {
+          "type": "integer",
+          "default": 0,
+          "description": "Timeout in milliseconds for code execution (0 to disable timeout).",
+          "scope": "resource"
+        },
+        "code-runner.customEnv": {
+          "type": "object",
+          "default": {},
+          "description": "Custom environment variables to pass to the running code.",
+          "scope": "resource"
+        },
+        "code-runner.showRunButtonInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show the Run / Stop button in the status bar.",
+          "scope": "resource"
         }
       }
     },
@@ -384,6 +458,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
+    "build": "npm run compile",
     "compile": "npm run check-types && node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "package": "node esbuild.mjs --production",
@@ -391,5 +466,22 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@vscode/extension-telemetry": "^1.5.2",
+    "micromatch": "^4.0.8",
+    "tree-kill": "^1.2.2"
+  },
+  "devDependencies": {
+    "@types/micromatch": "^4.0.10",
+    "@types/node": "^22.20.1",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
   }
 }

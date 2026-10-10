@@ -24,6 +24,16 @@ describe("splitFilePath", () => {
   it("handles paths without an extension", () => {
     const parts = splitFilePath("/tmp/build");
     expect(parts.baseNameWithoutExt).toBe("build");
+    expect(parts.fileExt).toBe("");
+  });
+
+  it("extracts relative file and relative directory", () => {
+    const parts = splitFilePath("/repo/src/components/app.tsx", "/repo");
+    expect(parts.relativeFile).toBe("src/components/app.tsx");
+    expect(parts.relativeDir).toBe("src/components");
+    expect(parts.fileExt).toBe("tsx");
+    expect(parts.baseName).toBe("app.tsx");
+    expect(parts.baseNameWithoutExt).toBe("app");
   });
 });
 
@@ -40,6 +50,45 @@ describe("replacePlaceholders", () => {
     expect(replacePlaceholders("node $fileNameWithoutExt", { codeFile })).toBe(
       "node hello",
     );
+  });
+
+  it("replaces $fileNameWithExt and $fileExt", () => {
+    expect(replacePlaceholders("run $fileNameWithExt --ext=$fileExt", { codeFile })).toBe(
+      "run hello.js --ext=js",
+    );
+  });
+
+  it("replaces $relativeFile and $relativeDir", () => {
+    expect(
+      replacePlaceholders("run $relativeFile in $relativeDir", {
+        codeFile: "/repo/src/index.ts",
+        workspaceFolder: "/repo",
+      }),
+    ).toBe("run src/index.ts in src");
+  });
+
+  it("replaces $cwd with quoted working directory", () => {
+    expect(replacePlaceholders("cd $cwd", { codeFile, cwd: "/home/user/custom" })).toBe(
+      'cd "/home/user/custom"',
+    );
+  });
+
+  it("replaces $args and $arguments", () => {
+    expect(replacePlaceholders("node $fileName $args", { codeFile, args: "--port 3000" })).toBe(
+      "node hello.js --port 3000",
+    );
+    expect(replacePlaceholders("node $fileName $arguments", { codeFile, args: "--dev" })).toBe(
+      "node hello.js --dev",
+    );
+  });
+
+  it("replaces environment variables via $env:VAR and ${env:VAR}", () => {
+    expect(
+      replacePlaceholders("echo $env:MY_VAR ${env:OTHER_VAR}", {
+        codeFile,
+        env: { MY_VAR: "foo", OTHER_VAR: "bar" },
+      }),
+    ).toBe("echo foo bar");
   });
 
   it("replaces $fullFileName and $fileName", () => {
@@ -82,5 +131,17 @@ describe("buildCommand", () => {
 
   it("returns the executor unchanged when there is no code file", () => {
     expect(buildCommand("echo Hello", {})).toBe("echo Hello");
+  });
+
+  it("appends arguments when args provided without placeholder in executor", () => {
+    expect(buildCommand("node $fileName", { codeFile, args: "arg1 arg2" })).toBe(
+      "node hello.js arg1 arg2",
+    );
+  });
+
+  it("does not duplicate arguments when $args placeholder was used", () => {
+    expect(buildCommand("node $fileName $args", { codeFile, args: "arg1 arg2" })).toBe(
+      "node hello.js arg1 arg2",
+    );
   });
 });

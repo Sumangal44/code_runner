@@ -30,6 +30,24 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("code-runner.runWithArguments", (fileUri?: vscode.Uri) => {
+      void codeManager?.runWithArguments(fileUri);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("code-runner.copyRunCommand", (fileUri?: vscode.Uri) => {
+      void codeManager?.copyRunCommand(fileUri);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("code-runner.clearOutput", () => {
+      codeManager?.clearOutput();
+    }),
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("code-runner.stop", () => {
       codeManager?.stop();
     }),

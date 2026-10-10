@@ -5,13 +5,19 @@
 [![CI](https://github.com/formulahendry/vscode-code-runner/actions/workflows/main.yml/badge.svg)](https://github.com/formulahendry/vscode-code-runner/actions/workflows/main.yml)
 [![Join the chat](https://badges.gitter.im/formulahendry/vscode-code-runner.svg)](https://gitter.im/formulahendry/vscode-code-runner)
 
-Run code snippets or whole files for many languages — **C, C++, Java, JavaScript, PHP, Python, Perl, Ruby, Go, Lua, Groovy, PowerShell, BAT/CMD, BASH/SH, F# Script, F# (.NET Core), C# Script, C# (.NET Core), VBScript, TypeScript, CoffeeScript, Scala, Swift, Julia, Crystal, OCaml Script, R, AppleScript, Elixir, Visual Basic .NET, Clojure, Haxe, Objective-C, Rust, Racket, Scheme, AutoHotkey, AutoIt, Kotlin, Dart, Free Pascal, Haskell, Nim, D, Lisp, Kit, V, SCSS, Sass, CUDA, Less, Fortran, Ring, Standard ML, Zig, Mojo, Erlang, SPWN, Pkl, Gleam** — plus custom commands.
+Run code snippets or whole files for many languages — **C, C++, Java, JavaScript, PHP, Python, Perl, Ruby, Go, Lua, Groovy, PowerShell, BAT/CMD, BASH/SH, F# Script, F# (.NET Core), C# Script, C# (.NET Core), VBScript, TypeScript, CoffeeScript, Scala, Swift, Julia, Crystal, OCaml Script, R, AppleScript, Elixir, Visual Basic .NET, Clojure, Haxe, Objective-C, Rust, Racket, Scheme, AutoHotkey, AutoIt, Kotlin, Dart, Free Pascal, Haskell, Nim, D, Lisp, Kit, V, SCSS, Sass, CUDA, Less, Fortran, Ring, Standard ML, Zig, Mojo, Erlang, SPWN, Pkl, Gleam, Bun, Deno** — plus custom commands.
 
 ## Features
 
 - Run the code file of the current active text editor.
 - Run a code file from the Explorer context menu.
 - Run a selected code snippet in the text editor.
+- **Run code with custom command-line arguments** (`Ctrl+Alt+A`).
+- **Interactive Status Bar item** to run or stop code with a single click.
+- **Copy run command to clipboard** to inspect or test in external terminals.
+- **Clear output channel** command.
+- **Configurable process timeout** to prevent runaway loops.
+- **Custom environment variables** support per workspace/project.
 - Run code according to its [shebang](<https://en.wikipedia.org/wiki/Shebang_(Unix)>) line.
 - Run code according to a filename glob.
 - Run a custom command.
@@ -28,13 +34,21 @@ To run code, use any of:
 - `F1`, then select/type `Run Code`
 - right-click the editor and choose `Run Code`
 - the `Run Code` button in the editor title menu
+- the `Run Code` button in the Status Bar
 - the `Run Code` item in the Explorer context menu
+
+To run code with arguments:
+
+- shortcut `Ctrl+Alt+A`
+- `F1`, then select/type `Run Code with Arguments`
+- right-click the editor and choose `Run Code with Arguments`
 
 To stop a running process:
 
 - shortcut `Ctrl+Alt+M`
 - `F1`, then select/type `Stop Code Run`
 - the `Stop Code Run` button in the editor title menu
+- the `Stop Code` button in the Status Bar
 - right-click the Output panel and choose `Stop Code Run`
 
 ![Usage](images/usage.gif)
@@ -44,6 +58,10 @@ To pick a language per run, use `Ctrl+Alt+J` (or `F1` → `Run By Language`) and
 ![Usage by language](images/usageRunByLanguage.gif)
 
 To run a custom command, use `Ctrl+Alt+K` (or `F1` → `Run Custom Command`).
+
+To copy the resolved run command, use `F1` → `Copy Run Command`.
+
+To clear the Code output channel, use `F1` → `Clear Output Channel`.
 
 ## Settings
 
@@ -73,9 +91,16 @@ Make sure every interpreter/compiler is on the system `PATH`, or point to it exp
 | `$dirWithoutTrailingSlash` | Directory of the file being run, without a trailing slash       |
 | `$fullFileName`          | Full name (path) of the file being run                            |
 | `$fileName`              | Base name of the file being run, without the directory            |
+| `$fileNameWithExt`       | Base name of the file being run (alias for `$fileName`)           |
 | `$fileNameWithoutExt`    | Base name of the file being run, without its extension            |
+| `$fileExt`               | File extension of the file without leading dot                    |
+| `$relativeFile`          | Path of the file relative to the workspace root                   |
+| `$relativeDir`           | Directory of the file relative to the workspace root              |
+| `$cwd`                   | Configured working directory                                      |
 | `$driveLetter`           | Drive letter of the file being run (Windows only)                 |
 | `$pythonPath`            | Python interpreter path (set via `Python: Select Interpreter`)    |
+| `$args` / `$arguments`   | Command-line arguments passed when running with arguments         |
+| `$env:VAR` / `${env:VAR}`| Value of environment variable `VAR`                              |
 
 > **Note about paths:** escape backslashes as `\\` and wrap paths containing spaces in `\"`.
 
@@ -141,6 +166,9 @@ Other useful options (all `"code-runner.<name>"` settings):
 | `showRunCommandInEditorContextMenu` | `true` | Show `Run Code` in the editor context menu                 |
 | `showRunCommandInExplorerContextMenu` | `true` | Show `Run Code` in the Explorer context menu               |
 | `showStopIconInEditorTitleMenu` | `true` | Show `Stop Code Run` icon in the editor title menu           |
+| `showRunButtonInStatusBar` | `true`     | Show `Run Code` / `Stop Code` button in the status bar             |
+| `timeout`                  | `0`        | Process timeout in milliseconds (0 disables timeout)               |
+| `customEnv`                | `{}`       | Custom environment variables passed to the execution               |
 | `terminalRoot`             | `""`       | Replace Windows drive letters for Bash/Cygwin terminals            |
 | `temporaryFileName`        | `tempCodeRunnerFile` | File name used for selected-snippet runs                  |
 | `respectShebang`           | `true`     | Respect a shebang line when choosing how to run                    |

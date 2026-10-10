@@ -1,3 +1,14 @@
+### 0.14.0 (2026-10-10)
+* New modern high-resolution logo icon
+* Add "Run Code with Arguments" command (`code-runner.runWithArguments` / `Ctrl+Alt+A`)
+* Add interactive Status Bar item to quickly run or stop code
+* Add "Copy Run Command" command (`code-runner.copyRunCommand`)
+* Add "Clear Output Channel" command (`code-runner.clearOutput`)
+* Add configurable process execution timeout (`code-runner.timeout`)
+* Add custom environment variables support (`code-runner.customEnv`)
+* Add expanded placeholders: `$relativeFile`, `$relativeDir`, `$fileExt`, `$fileNameWithExt`, `$cwd`, `$args`, `$env:VAR` / `${env:VAR}`
+* Add built-in executor support for Bun, Deno, Kotlin, and Elixir
+
 ### 0.13.0 (2026-09-06)
 * Complete rebuild on modern tooling
   * Upgrade to TypeScript 5 with strict typing and ES2022

@@ -32,18 +32,48 @@ export class CodeManager implements vscode.Disposable {
   private codeFile = "";
   private cwd = "";
   private workspaceFolder = "";
+  private lastArguments = "";
+  private statusBarItem?: vscode.StatusBarItem;
+  private timeoutTimer?: NodeJS.Timeout;
 
   constructor() {
     this.outputChannel = vscode.window.createOutputChannel("Code");
     this.appInsights = new Telemetry();
     this.config = getConfiguration("code-runner");
+    this.initStatusBar();
   }
 
   onDidCloseTerminal(): void {
     this.terminal = undefined;
   }
 
-  async run(languageId?: string, fileUri?: vscode.Uri): Promise<void> {
+  private initStatusBar(): void {
+    this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+    this.updateStatusBar(false);
+  }
+
+  private updateStatusBar(running: boolean): void {
+    if (!this.statusBarItem) {
+      return;
+    }
+    const showButton = this.config.get<boolean>("showRunButtonInStatusBar", true);
+    if (!showButton) {
+      this.statusBarItem.hide();
+      return;
+    }
+    if (running) {
+      this.statusBarItem.text = "$(debug-stop) Stop Code";
+      this.statusBarItem.tooltip = "Click to stop running code";
+      this.statusBarItem.command = "code-runner.stop";
+    } else {
+      this.statusBarItem.text = "$(play) Run Code";
+      this.statusBarItem.tooltip = "Click to run code";
+      this.statusBarItem.command = "code-runner.run";
+    }
+    this.statusBarItem.show();
+  }
+
+  async run(languageId?: string, fileUri?: vscode.Uri, customArgs?: string): Promise<void> {
     if (this.isRunning) {
       vscode.window.showInformationMessage("Code is already running!");
       return;
@@ -70,7 +100,52 @@ export class CodeManager implements vscode.Disposable {
       return;
     }
 
-    this.getCodeFileAndExecute(fileExtension, executor);
+    this.getCodeFileAndExecute(fileExtension, executor, true, customArgs);
+  }
+
+  async runWithArguments(fileUri?: vscode.Uri): Promise<void> {
+    const args = await vscode.window.showInputBox({
+      prompt: "Enter command-line arguments to pass to the program",
+      value: this.lastArguments,
+      placeHolder: "e.g. arg1 arg2 --flag",
+    });
+    if (args === undefined) {
+      return;
+    }
+    this.lastArguments = args;
+    await this.run(undefined, fileUri, args);
+  }
+
+  async copyRunCommand(fileUri?: vscode.Uri): Promise<void> {
+    this.runFromExplorer = this.checkIsRunFromExplorer(fileUri);
+    if (this.runFromExplorer && fileUri) {
+      this.document = await vscode.workspace.openTextDocument(fileUri);
+    } else {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage("No code found or selected.");
+        return;
+      }
+      this.document = editor.document;
+    }
+
+    this.initialize();
+
+    const fileExtension = this.extensionOf(this.document.fileName);
+    const executor = this.getExecutor(undefined, fileExtension);
+    if (!executor) {
+      vscode.window.showInformationMessage("Code language not supported or defined.");
+      return;
+    }
+
+    this.codeFile = this.document.fileName;
+    const command = await this.getFinalCommandToRunCodeFile(executor, true);
+    await vscode.env.clipboard.writeText(command);
+    vscode.window.showInformationMessage(`Copied run command to clipboard: ${command}`);
+  }
+
+  clearOutput(): void {
+    this.outputChannel.clear();
   }
 
   runCustomCommand(): void {
@@ -115,6 +190,7 @@ export class CodeManager implements vscode.Disposable {
 
   dispose(): void {
     this.stopRunning();
+    this.statusBarItem?.dispose();
     this.appInsights.dispose();
   }
 
@@ -130,8 +206,13 @@ export class CodeManager implements vscode.Disposable {
   }
 
   private stopRunning(): void {
+    if (this.timeoutTimer) {
+      clearTimeout(this.timeoutTimer);
+      this.timeoutTimer = undefined;
+    }
     if (this.isRunning && this.process) {
       this.isRunning = false;
+      this.updateStatusBar(false);
       void vscode.commands.executeCommand("setContext", "code-runner.codeRunning", false);
       kill(this.process.pid);
     }
@@ -174,7 +255,12 @@ export class CodeManager implements vscode.Disposable {
     return vscode.workspace.workspaceFolders[0].uri.fsPath;
   }
 
-  private getCodeFileAndExecute(fileExtension: string, executor: string, appendFile = true): void {
+  private getCodeFileAndExecute(
+    fileExtension: string,
+    executor: string,
+    appendFile = true,
+    customArgs?: string,
+  ): void {
     const activeTextEditor = vscode.window.activeTextEditor;
     const selection = activeTextEditor?.selection;
     const ignoreSelection = this.config.get<boolean>("ignoreSelection", false);
@@ -188,17 +274,22 @@ export class CodeManager implements vscode.Disposable {
       this.codeFile = this.document.fileName;
 
       if (this.config.get<boolean>("saveAllFilesBeforeRun", false)) {
-        void vscode.workspace.saveAll().then(() => void this.executeCommand(executor, appendFile));
+        void vscode.workspace
+          .saveAll()
+          .then(() => void this.executeCommand(executor, appendFile, customArgs));
         return;
       }
       if (this.config.get<boolean>("saveFileBeforeRun", false)) {
-        void this.document.save().then(() => void this.executeCommand(executor, appendFile));
+        void this.document
+          .save()
+          .then(() => void this.executeCommand(executor, appendFile, customArgs));
         return;
       }
     } else if (this.document) {
-      let text = this.runFromExplorer || !selection || selection.isEmpty || ignoreSelection
-        ? this.document.getText()
-        : this.document.getText(selection);
+      let text =
+        this.runFromExplorer || !selection || selection.isEmpty || ignoreSelection
+          ? this.document.getText()
+          : this.document.getText(selection);
 
       const languageId = this.languageIdOf(this.document);
       if (languageId === "php") {
@@ -215,7 +306,7 @@ export class CodeManager implements vscode.Disposable {
       this.createRandomFile(text, folder, fileExtension);
     }
 
-    void this.executeCommand(executor, appendFile);
+    void this.executeCommand(executor, appendFile, customArgs);
   }
 
   private createRandomFile(content: string, folder: string, fileExtension: string): void {
@@ -278,25 +369,37 @@ export class CodeManager implements vscode.Disposable {
     return resolved?.executor;
   }
 
-  private async executeCommand(executor: string, appendFile = true): Promise<void> {
+  private async executeCommand(
+    executor: string,
+    appendFile = true,
+    customArgs?: string,
+  ): Promise<void> {
     if (this.config.get<boolean>("runInTerminal", false)) {
-      await this.executeCommandInTerminal(executor, appendFile);
+      await this.executeCommandInTerminal(executor, appendFile, customArgs);
     } else {
-      await this.executeCommandInOutputChannel(executor, appendFile);
+      await this.executeCommandInOutputChannel(executor, appendFile, customArgs);
     }
   }
 
-  private async getFinalCommandToRunCodeFile(executor: string, appendFile = true): Promise<string> {
+  private async getFinalCommandToRunCodeFile(
+    executor: string,
+    appendFile = true,
+    customArgs?: string,
+  ): Promise<string> {
     let pythonPath = "python";
     if (executor.includes("$pythonPath")) {
       pythonPath = await getPythonPath(this.document);
     }
+    const customEnv = this.config.get<Record<string, string>>("customEnv", {});
     return buildCommand(
       executor,
       {
         codeFile: this.codeFile,
         workspaceFolder: this.workspaceFolder,
         pythonPath,
+        args: customArgs,
+        cwd: this.cwd,
+        env: customEnv,
       },
       appendFile,
     );
@@ -356,7 +459,11 @@ export class CodeManager implements vscode.Disposable {
     return command;
   }
 
-  private async executeCommandInTerminal(executor: string, appendFile = true): Promise<void> {
+  private async executeCommandInTerminal(
+    executor: string,
+    appendFile = true,
+    customArgs?: string,
+  ): Promise<void> {
     let isNewTerminal = false;
     if (!this.terminal) {
       this.terminal = vscode.window.createTerminal("Code");
@@ -367,7 +474,7 @@ export class CodeManager implements vscode.Disposable {
 
     const psExecutor = this.changeExecutorFromCmdToPs(executor);
     const command = this.changeFilePathForBashOnWindows(
-      await this.getFinalCommandToRunCodeFile(psExecutor, appendFile),
+      await this.getFinalCommandToRunCodeFile(psExecutor, appendFile, customArgs),
     );
 
     if (this.config.get<boolean>("clearPreviousOutput", false) && !isNewTerminal) {
@@ -380,8 +487,13 @@ export class CodeManager implements vscode.Disposable {
     this.terminal.sendText(command);
   }
 
-  private async executeCommandInOutputChannel(executor: string, appendFile = true): Promise<void> {
+  private async executeCommandInOutputChannel(
+    executor: string,
+    appendFile = true,
+    customArgs?: string,
+  ): Promise<void> {
     this.isRunning = true;
+    this.updateStatusBar(true);
     void vscode.commands.executeCommand("setContext", "code-runner.codeRunning", true);
 
     if (this.config.get<boolean>("clearPreviousOutput", false)) {
@@ -391,21 +503,41 @@ export class CodeManager implements vscode.Disposable {
     const showExecutionMessage = this.config.get<boolean>("showExecutionMessage", true);
     this.outputChannel.show(this.config.get<boolean>("preserveFocus", true));
 
-    const command = await this.getFinalCommandToRunCodeFile(executor, appendFile);
+    const command = await this.getFinalCommandToRunCodeFile(executor, appendFile, customArgs);
     if (showExecutionMessage) {
       this.outputChannel.appendLine(`[Running] ${command}`);
     }
     this.sendRunEvent(executor, false);
 
+    const customEnv = this.config.get<Record<string, string>>("customEnv", {});
+    const env = { ...process.env, ...customEnv };
+
     const startTime = Date.now();
-    const child = spawn(command, { cwd: this.cwd, shell: true });
+    const child = spawn(command, { cwd: this.cwd, shell: true, env });
     this.process = child as ChildProcess & { pid: number };
+
+    const timeout = this.config.get<number>("timeout", 0);
+    if (timeout > 0) {
+      this.timeoutTimer = setTimeout(() => {
+        if (this.isRunning) {
+          this.outputChannel.appendLine(
+            `\n[Timeout] Process exceeded timeout of ${timeout}ms. Stopping...`,
+          );
+          this.stopRunning();
+        }
+      }, timeout);
+    }
 
     child.stdout.on("data", (data) => this.outputChannel.append(data.toString()));
     child.stderr.on("data", (data) => this.outputChannel.append(data.toString()));
 
     child.on("close", (code) => {
+      if (this.timeoutTimer) {
+        clearTimeout(this.timeoutTimer);
+        this.timeoutTimer = undefined;
+      }
       this.isRunning = false;
+      this.updateStatusBar(false);
       void vscode.commands.executeCommand("setContext", "code-runner.codeRunning", false);
       const elapsed = (Date.now() - startTime) / 1000;
       this.outputChannel.appendLine("");

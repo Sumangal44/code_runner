@@ -62,4 +62,15 @@ describe("resolveExecutor", () => {
     const result = resolveExecutor(baseConfig(), "", ".xyz", "a.xyz", true);
     expect(result).toBeUndefined();
   });
+
+  it("resolves modern runtimes such as bun and deno", () => {
+    const config = baseConfig();
+    config.executorMap.bun = "bun run";
+    config.executorMap.deno = "deno run";
+    config.executorMapByFileExtension[".bun"] = "bun run";
+
+    expect(resolveExecutor(config, "bun", ".ts", "server.ts", true)?.executor).toBe("bun run");
+    expect(resolveExecutor(config, "deno", ".js", "main.js", true)?.executor).toBe("deno run");
+    expect(resolveExecutor(config, "", ".bun", "app.bun", true)?.executor).toBe("bun run");
+  });
 });
