@@ -7,7 +7,7 @@
       "script": "compile",
       "problemMatcher": "$tsc",
       "presentation": {
-        "reveal": "svil"
+        "reveal": "silent"
       },
       "group": {
         "kind": "build",

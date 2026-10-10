@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 <!-- Please search existing issues to avoid creating duplicates. -->
-<!-- FYI issues: https://github.com/formulahendry/vscode-code-runner/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3Afyi -->
+<!-- FYI issues: https://github.com/sumangal44/code_runner/issues -->
 
 **Is your feature request related to a problem? Please describe.**
 Description of what the problem is. Ex. I'm always frustrated when [...]

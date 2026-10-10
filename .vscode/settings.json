@@ -8,7 +8,7 @@
     "dist": true,
     "images": true
   },
-  "typescript.tsdk": "./node_modules/typescript/lib",
+  "js/ts.tsdk.path": "./node_modules/typescript/lib",
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },

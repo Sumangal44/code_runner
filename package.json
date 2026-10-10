@@ -27,26 +27,18 @@
     "multi-root ready"
   ],
   "bugs": {
-    "url": "https://github.com/formulahendry/vscode-code-runner/issues",
-    "email": "formulahendry@gmail.com"
+    "url": "https://github.com/Sumangal44/code_runner/issues",
+    "email": "sumangalkaran44@gmail.com"
   },
-  "homepage": "https://github.com/formulahendry/vscode-code-runner/blob/master/README.md",
+  "homepage": "https://github.com/Sumangal44/code_runner/blob/master/README.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formulahendry/vscode-code-runner.git"
+    "url": "https://github.com/Sumangal44/code_runner.git"
   },
   "sponsor": {
-    "url": "https://www.patreon.com/junhan"
+    "url": "https://www.patreon.com/SumangalKaran"
   },
-  "activationEvents": [
-    "onCommand:code-runner.run",
-    "onCommand:code-runner.runWithArguments",
-    "onCommand:code-runner.runCustomCommand",
-    "onCommand:code-runner.runByLanguage",
-    "onCommand:code-runner.copyRunCommand",
-    "onCommand:code-runner.clearOutput",
-    "onCommand:code-runner.stop"
-  ],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
