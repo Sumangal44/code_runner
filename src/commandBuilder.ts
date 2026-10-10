@@ -1,3 +1,4 @@
+import * as os from "node:os";
 import { posix, win32 } from "node:path";
 
 export interface CommandInput {
@@ -17,8 +18,14 @@ export interface CommandInput {
 
 const IS_WINDOWS_PATH = /^[A-Za-z]:[\\/]/;
 
-function pathModuleFor(codeFile: string): typeof posix {
-  return IS_WINDOWS_PATH.test(codeFile) ? win32 : posix;
+function pathModuleFor(codeFile?: string): typeof posix {
+  if (codeFile && IS_WINDOWS_PATH.test(codeFile)) {
+    return win32;
+  }
+  if (os.platform() === "win32") {
+    return win32;
+  }
+  return posix;
 }
 
 /**
@@ -126,12 +133,17 @@ export function replacePlaceholders(executor: string, input: CommandInput): stri
     return result;
   }
 
+  const pathModule = pathModuleFor(input.codeFile);
   const parts = splitFilePath(input.codeFile, input.workspaceFolder);
   const workspaceRoot = input.workspaceFolder ?? parts.dir;
   const cwd = input.cwd ?? parts.dir;
+  const fullExecutable = quote(pathModule.join(parts.dirWithoutTrailingSlash, parts.baseNameWithoutExt));
+  const fullBaseFile = quote(pathModule.join(parts.dirWithoutTrailingSlash, parts.baseName));
 
   return result
     .replace(/\$workspaceRoot/g, workspaceRoot)
+    .replace(/\$dir\$fileNameWithoutExt/g, fullExecutable)
+    .replace(/\$dir\$fileName/g, fullBaseFile)
     .replace(/\$fileNameWithoutExt/g, parts.baseNameWithoutExt)
     .replace(/\$fileNameWithExt/g, parts.baseName)
     .replace(/\$fullFileName/g, quote(input.codeFile))

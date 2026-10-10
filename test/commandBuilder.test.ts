@@ -144,4 +144,38 @@ describe("buildCommand", () => {
       "node hello.js arg1 arg2",
     );
   });
+
+  it("builds cross-platform Swift command on POSIX and Windows", () => {
+    // POSIX path
+    const posixCmd = buildCommand("swift", { codeFile: "/Users/dev/project/hello.swift" });
+    expect(posixCmd).toBe('swift "/Users/dev/project/hello.swift"');
+
+    // Windows path
+    const winCmd = buildCommand("swift", { codeFile: "C:\\Projects\\SwiftApp\\main.swift" });
+    expect(winCmd).toBe('swift "C:\\Projects\\SwiftApp\\main.swift"');
+  });
+
+  it("builds cross-platform Java command on POSIX and Windows", () => {
+    const javaExecutor = "cd $dir && javac $fileName && java $fileNameWithoutExt";
+
+    // POSIX
+    const posixJava = buildCommand(javaExecutor, { codeFile: "/Users/dev/project/Hello.java" });
+    expect(posixJava).toBe('cd "/Users/dev/project" && javac Hello.java && java Hello');
+
+    // Windows
+    const winJava = buildCommand(javaExecutor, { codeFile: "C:\\Projects\\JavaApp\\Hello.java" });
+    expect(winJava).toBe('cd "C:\\Projects\\JavaApp" && javac Hello.java && java Hello');
+  });
+
+  it("replaces $dir$fileNameWithoutExt with native path separators on Windows and POSIX", () => {
+    const cExecutor = "cd $dir && gcc $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt";
+
+    // POSIX
+    const posixC = buildCommand(cExecutor, { codeFile: "/Users/dev/code/main.c" });
+    expect(posixC).toBe('cd "/Users/dev/code" && gcc main.c -o main && "/Users/dev/code/main"');
+
+    // Windows
+    const winC = buildCommand(cExecutor, { codeFile: "C:\\Projects\\code\\main.c" });
+    expect(winC).toBe('cd "C:\\Projects\\code" && gcc main.c -o main && "C:\\Projects\\code\\main"');
+  });
 });

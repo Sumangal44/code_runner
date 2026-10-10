@@ -45,5 +45,5 @@ export async function getPythonPath(document?: vscode.TextDocument): Promise<str
     // Fall through to the default interpreter name.
   }
 
-  return "python";
+  return process.platform === "win32" ? "python" : "python3";
 }

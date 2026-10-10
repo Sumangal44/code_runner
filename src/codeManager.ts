@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { rmSync, writeFileSync } from "node:fs";
 import * as os from "node:os";
@@ -510,7 +510,19 @@ export class CodeManager implements vscode.Disposable {
     this.sendRunEvent(executor, false);
 
     const customEnv = this.config.get<Record<string, string>>("customEnv", {});
-    const env = { ...process.env, ...customEnv };
+    const env: NodeJS.ProcessEnv = { ...process.env, ...customEnv };
+
+    if (os.platform() === "darwin" && !env.JAVA_HOME) {
+      try {
+        const javaHome = execSync("/usr/libexec/java_home 2>/dev/null", { encoding: "utf8" }).trim();
+        if (javaHome) {
+          env.JAVA_HOME = javaHome;
+          env.PATH = `${javaHome}/bin:${env.PATH ?? ""}`;
+        }
+      } catch {
+        // Fall through to system PATH
+      }
+    }
 
     const startTime = Date.now();
     const child = spawn(command, { cwd: this.cwd, shell: true, env });

@@ -260,6 +260,8 @@
             ".ex": "elixir",
             ".bun": "bun run",
             ".rs": "cd $dir && rustc $fileName && $dir$fileNameWithoutExt",
+            ".swift": "swift",
+            ".java": "cd $dir && javac $fileName && java $fileNameWithoutExt",
             ".hx": "haxe --cwd $dirWithoutTrailingSlash --run $fileNameWithoutExt",
             ".rkt": "racket",
             ".scm": "csi -script",
@@ -466,7 +468,8 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:live": "node test/runLiveLanguages.mjs"
   },
   "dependencies": {
     "@vscode/extension-telemetry": "^1.5.2",
