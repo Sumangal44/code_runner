@@ -462,6 +462,7 @@
     "compile": "npm run check-types && node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "package": "node esbuild.mjs --production",
+    "package-vsix": "vsce package --no-dependencies",
     "check-types": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
