@@ -27,13 +27,13 @@
     "multi-root ready"
   ],
   "bugs": {
-    "url": "https://github.com/Sumangal44/code_runner/issues",
+    "url": "https://github.com/Sumangal44/code_runner_plus/issues",
     "email": "sumangalkaran44@gmail.com"
   },
-  "homepage": "https://github.com/Sumangal44/code_runner/blob/master/README.md",
+  "homepage": "https://github.com/Sumangal44/code_runner_plus/blob/master/README.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Sumangal44/code_runner.git"
+    "url": "https://github.com/Sumangal44/code_runner_plus.git"
   },
   "sponsor": {
     "url": "https://www.patreon.com/SumangalKaran"

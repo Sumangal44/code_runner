@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 <!-- Please search existing issues to avoid creating duplicates. -->
-<!-- FYI issues: https://github.com/sumangal44/code_runner/issues -->
+<!-- FYI issues: https://github.com/sumangal44/code_runner_plus/issues -->
 
 - VS Code Version:
 - OS Version:
